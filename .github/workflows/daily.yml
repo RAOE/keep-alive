@@ -1,0 +1,35 @@
+name: Daily keep-alive
+
+on:
+  schedule:
+    - cron: "17 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Append heartbeat
+        run: |
+          echo "$(date -u +'%Y-%m-%d %H:%M UTC') heartbeat" >> keep-alive.log
+
+      - name: Check sites
+        continue-on-error: true
+        run: |
+          EN=$(curl -sS -o /dev/null -w "%{http_code}" https://japanese-vocab-quiz-c1gq7yyubx7.qoder.zone/)
+          JA=$(curl -sS -o /dev/null -w "%{http_code}" https://japanese-vocab-audio-c1gq7yyubx7.qoder.zone/)
+          echo "$(date -u +'%Y-%m-%d') sites: vocabulary-quiz=$EN japanese-audio=$JA" >> keep-alive.log
+
+      - name: Commit
+        run: |
+          git config user.name "RAOE"
+          git config user.email "RAOE@users.noreply.github.com"
+          git add keep-alive.log
+          git commit -m "chore: daily keep-alive $(date -u +'%Y-%m-%d')"
+          git push
